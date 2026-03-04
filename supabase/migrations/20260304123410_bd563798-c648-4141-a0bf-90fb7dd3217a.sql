@@ -1,0 +1,1 @@
+UPDATE settings SET value = '[{"days":"Segunda a Quinta","hours":"06:00 às 21:00"},{"days":"Sexta-feira","hours":"06:00 às 18:00"},{"days":"Sábado, Domingo e Feriados","hours":"Com prévio agendamento"}]' WHERE key = 'schedule';
