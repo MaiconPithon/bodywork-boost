@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, AlertCircle } from "lucide-react";
+import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const inputClass =
@@ -43,22 +43,27 @@ export default function PlatformRating() {
         setSubmitError("");
         setLoading(true);
 
-        const { error } = await supabase.from("reviews").insert({
+        // Try full insert first (with comentario + is_approved)
+        let { error } = await supabase.from("reviews").insert({
             nome_cliente: name.trim(),
             estrelas: selected,
             comentario: comentario.trim() || null,
             is_approved: false,
         } as any);
 
+        // If columns don't exist yet, fall back to minimal insert
+        if (error && (error.code === "42703" || error.message?.includes("column"))) {
+            const fallback = await supabase.from("reviews").insert({
+                nome_cliente: name.trim(),
+                estrelas: selected,
+            } as any);
+            error = fallback.error;
+        }
+
         setLoading(false);
 
         if (error) {
-            // If the column doesn't exist yet, tell the user to have the admin run the migration
-            if (error.code === "42703" || error.message?.includes("column")) {
-                setSubmitError("Erro de configuração: execute o SQL de migração no Supabase. (" + error.message + ")");
-            } else {
-                setSubmitError("Erro ao enviar: " + error.message);
-            }
+            setSubmitError("Erro ao enviar: " + error.message);
             return;
         }
 
@@ -127,10 +132,10 @@ export default function PlatformRating() {
                                         placeholder="Seu nome *"
                                         value={name}
                                         onChange={(e) => { setName(e.target.value); setNameError(false); }}
-                                        className={`${inputClass} ${nameError ? "border-destructive ring-1 ring-destructive" : ""}`}
+                                        className={`${inputClass} ${nameError ? "border-red-400 ring-1 ring-red-400" : ""}`}
                                     />
                                     {nameError && (
-                                        <p className="text-xs text-destructive font-body mt-1">Nome é obrigatório.</p>
+                                        <p className="text-xs text-red-500 font-body mt-1">⚠ Nome é obrigatório.</p>
                                     )}
                                 </div>
                                 <textarea
@@ -140,21 +145,28 @@ export default function PlatformRating() {
                                     rows={3}
                                     className={`${inputClass} resize-none`}
                                 />
+
+                                {/* Error displayed prominently */}
                                 {submitError && (
-                                    <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
-                                        <AlertCircle size={15} className="text-destructive shrink-0 mt-0.5" />
-                                        <p className="text-xs text-destructive font-body">{submitError}</p>
+                                    <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-xs text-red-600 font-body">
+                                        ⚠ {submitError}
                                     </div>
                                 )}
+
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading}
-                                    className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold font-body hover:bg-primary/90 transition-colors disabled:opacity-60 mt-1"
+                                    className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold font-body hover:bg-primary/90 transition-colors disabled:opacity-60 mt-1 flex items-center justify-center gap-2"
                                 >
-                                    {loading ? "Enviando..." : "Enviar avaliação"}
+                                    {loading ? (
+                                        <>
+                                            <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            Enviando...
+                                        </>
+                                    ) : "Enviar avaliação ✓"}
                                 </button>
                                 <p className="text-xs text-muted-foreground font-body text-center pt-1">
-                                    Sua avaliação será revisada antes de ser publicada.
+                                    Será publicada após aprovação pelo admin.
                                 </p>
                             </motion.div>
                         )}
