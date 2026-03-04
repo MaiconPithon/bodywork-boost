@@ -5,8 +5,6 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // GitHub Pages serves from /bodywork-boost/ — use '/' for custom domain
-  base: mode === "production" ? "/bodywork-boost/" : "/",
   server: {
     host: "::",
     port: 8080,
@@ -21,4 +19,5 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+
 
