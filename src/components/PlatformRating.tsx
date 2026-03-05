@@ -66,6 +66,10 @@ export default function PlatformRating() {
             }
 
             setSubmitted(true);
+            setName("");
+            setComentario("");
+            setSelected(0);
+            setShowForm(false);
             fetchStats();
         } catch (err) {
             setSubmitError("Erro inesperado. Tente novamente.");
