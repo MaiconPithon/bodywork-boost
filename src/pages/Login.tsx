@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Lock, Mail, ArrowLeft } from "lucide-react";
 import loginBg from "@/assets/login-bg.jpg";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +19,29 @@ export default function Login() {
   const [forgotMessage, setForgotMessage] = useState("");
 
   const [redirectError, setRedirectError] = useState(false);
+  const waitingForRole = useRef(false);
+
+  // Watch for isAdmin to become true after login
+  useEffect(() => {
+    if (waitingForRole.current && user && isAdmin) {
+      waitingForRole.current = false;
+      setLoading(false);
+      navigate("/admin");
+    }
+  }, [user, isAdmin, navigate]);
+
+  // Timeout fallback - if role check takes too long
+  useEffect(() => {
+    if (!waitingForRole.current) return;
+    const timer = setTimeout(() => {
+      if (waitingForRole.current) {
+        waitingForRole.current = false;
+        setLoading(false);
+        setRedirectError(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,15 +49,12 @@ export default function Login() {
     setRedirectError(false);
     setLoading(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError("Email ou senha incorretos.");
     } else {
-      try {
-        navigate("/admin");
-      } catch {
-        setRedirectError(true);
-      }
+      // Wait for role check via useEffect above
+      waitingForRole.current = true;
     }
   };
 
