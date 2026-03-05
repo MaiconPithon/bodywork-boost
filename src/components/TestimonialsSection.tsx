@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 
-type Review = Pick<Tables<"reviews">, "id" | "nome_cliente" | "estrelas" | "comentario">;
+interface Review {
+    id: string;
+    nome_cliente: string;
+    estrelas: number;
+    comentario: string | null;
+}
 
 function StarRow({ count }: { count: number }) {
     return (
@@ -32,7 +36,11 @@ export default function TestimonialsSection() {
             .select("id, nome_cliente, estrelas, comentario")
             .eq("is_approved", true)
             .order("created_at", { ascending: false })
-            .then(({ data }) => {
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error("Error loading testimonials:", error.message);
+                    return;
+                }
                 if (data && data.length > 0) setReviews(data);
             });
     }, []);
@@ -82,7 +90,6 @@ export default function TestimonialsSection() {
                     </p>
                 </motion.div>
 
-                {/* Desktop: up to 3 cards side by side */}
                 <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
                     <AnimatePresence mode="wait">
                         {visibleIndices.map((idx) => (
@@ -99,7 +106,6 @@ export default function TestimonialsSection() {
                     </AnimatePresence>
                 </div>
 
-                {/* Mobile: single card */}
                 <div className="sm:hidden max-w-sm mx-auto">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -114,7 +120,6 @@ export default function TestimonialsSection() {
                     </AnimatePresence>
                 </div>
 
-                {/* Navigation (show when > 3 reviews) */}
                 {reviews.length > 3 && (
                     <div className="flex justify-center gap-3 mt-6">
                         <button
@@ -129,8 +134,7 @@ export default function TestimonialsSection() {
                                 <button
                                     key={i}
                                     onClick={() => setCurrent(i)}
-                                    className={`h-1.5 rounded-full transition-all ${i === current ? "bg-primary w-4" : "bg-border w-1.5"
-                                        }`}
+                                    className={`h-1.5 rounded-full transition-all ${i === current ? "bg-primary w-4" : "bg-border w-1.5"}`}
                                     aria-label={`Avaliacao ${i + 1}`}
                                 />
                             ))}

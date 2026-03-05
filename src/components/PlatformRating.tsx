@@ -22,11 +22,19 @@ export default function PlatformRating() {
     useEffect(() => { fetchStats(); }, []);
 
     const fetchStats = async () => {
-        const { data } = await supabase.from("reviews").select("estrelas");
-        if (data && data.length > 0) {
-            setTotal(data.length);
-            const sum = data.reduce((acc, r) => acc + (r.estrelas as number), 0);
-            setAvg(parseFloat((sum / data.length).toFixed(1)));
+        try {
+            const { data, error } = await supabase.from("reviews").select("estrelas");
+            if (error) {
+                console.error("Error fetching review stats:", error.message);
+                return;
+            }
+            if (data && data.length > 0) {
+                setTotal(data.length);
+                const sum = data.reduce((acc, r) => acc + r.estrelas, 0);
+                setAvg(parseFloat((sum / data.length).toFixed(1)));
+            }
+        } catch (err) {
+            console.error("Unexpected error fetching stats:", err);
         }
     };
 
@@ -43,32 +51,27 @@ export default function PlatformRating() {
         setSubmitError("");
         setLoading(true);
 
-        // Try full insert first (with comentario + is_approved)
-        let { error } = await supabase.from("reviews").insert({
-            nome_cliente: name.trim(),
-            estrelas: selected,
-            comentario: comentario.trim() || null,
-            is_approved: false,
-        } as any);
-
-        // If columns don't exist yet, fall back to minimal insert
-        if (error && (error.code === "42703" || error.message?.includes("column"))) {
-            const fallback = await supabase.from("reviews").insert({
+        try {
+            const { error } = await supabase.from("reviews").insert({
                 nome_cliente: name.trim(),
                 estrelas: selected,
-            } as any);
-            error = fallback.error;
+                comentario: comentario.trim() || null,
+                is_approved: false,
+            });
+
+            if (error) {
+                setSubmitError("Erro ao enviar: " + error.message);
+                setLoading(false);
+                return;
+            }
+
+            setSubmitted(true);
+            fetchStats();
+        } catch (err) {
+            setSubmitError("Erro inesperado. Tente novamente.");
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
-
-        if (error) {
-            setSubmitError("Erro ao enviar: " + error.message);
-            return;
-        }
-
-        setSubmitted(true);
-        fetchStats();
     };
 
     return (
@@ -146,7 +149,6 @@ export default function PlatformRating() {
                                     className={`${inputClass} resize-none`}
                                 />
 
-                                {/* Error displayed prominently */}
                                 {submitError && (
                                     <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-xs text-red-600 font-body">
                                         ⚠ {submitError}
