@@ -24,6 +24,9 @@ export default function Footer() {
         <Link to="/login" className="inline-flex items-center gap-1 text-background/30 hover:text-background/50 transition-colors font-body text-xs">
           <Lock size={12} /> Área Administrativa
         </Link>
+        <p className="font-body text-[11px] text-background/25 mt-4 tracking-wide">
+          Desenvolvido por Michael Pithon
+        </p>
       </div>
     </footer>
   );
