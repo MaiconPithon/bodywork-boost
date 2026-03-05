@@ -11,21 +11,48 @@ const defaultSchedule: ScheduleItem[] = [
   { days: "Sábado, Domingo e Feriados", hours: "Com prévio agendamento" },
 ];
 
+function getIsCurrentlyOpen(schedule: ScheduleItem[], manualOpen: boolean): boolean {
+  if (!manualOpen) return false;
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon...6=Sat
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const currentTime = hours * 60 + minutes;
+
+  // Mon-Thu: 06:00-21:00, Fri: 06:00-18:00, Sat/Sun: closed (agendamento)
+  if (day >= 1 && day <= 4) {
+    return currentTime >= 360 && currentTime < 1260; // 06:00-21:00
+  } else if (day === 5) {
+    return currentTime >= 360 && currentTime < 1080; // 06:00-18:00
+  }
+  return false; // weekends
+}
+
 export default function ContactSection() {
   const [schedule, setSchedule] = useState<ScheduleItem[]>(defaultSchedule);
+  const [manualOpen, setManualOpen] = useState(true);
   const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from("settings").select("key, value").in("key", ["schedule", "is_open"]);
+      let sched = defaultSchedule;
+      let manual = true;
       if (data) {
         const s = data.find((d) => d.key === "schedule");
         const o = data.find((d) => d.key === "is_open");
-        if (s) setSchedule(JSON.parse(s.value));
-        if (o) setIsOpen(o.value === "true");
+        if (s) { sched = JSON.parse(s.value); setSchedule(sched); }
+        if (o) { manual = o.value === "true"; setManualOpen(manual); }
       }
+      setIsOpen(getIsCurrentlyOpen(sched, manual));
     };
     load();
+
+    // Update every minute
+    const interval = setInterval(() => {
+      setIsOpen(prev => getIsCurrentlyOpen(schedule, manualOpen));
+    }, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -67,8 +94,8 @@ export default function ContactSection() {
             <div className="flex items-center gap-2 text-primary-foreground mb-5">
               <Clock size={20} />
               <h3 className="font-display text-xl font-semibold">Horários</h3>
-              {!isOpen && <span className="ml-auto text-xs bg-destructive/80 text-destructive-foreground px-2 py-0.5 rounded-full">Agenda Indisponível</span>}
-              {isOpen && <span className="ml-auto text-xs bg-whatsapp/80 text-whatsapp-foreground px-2 py-0.5 rounded-full">Aberto</span>}
+              {!isOpen && <span className="ml-auto text-xs bg-destructive/90 text-destructive-foreground px-2 py-0.5 rounded-full font-semibold">Fechado</span>}
+              {isOpen && <span className="ml-auto text-xs bg-whatsapp/80 text-whatsapp-foreground px-2 py-0.5 rounded-full font-semibold">Aberto</span>}
             </div>
             <div className="space-y-4">
               {schedule.map((item) => (
