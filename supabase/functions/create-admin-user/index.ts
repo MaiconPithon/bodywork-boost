@@ -7,13 +7,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-    // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
 
     try {
-        // Verify caller is authenticated and is a super_admin
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) {
             return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -21,14 +19,12 @@ serve(async (req) => {
             });
         }
 
-        // Use the service role key to perform admin operations
         const supabaseAdmin = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
             { auth: { autoRefreshToken: false, persistSession: false } }
         );
 
-        // Verify the caller's JWT to ensure they are a super_admin
         const callerToken = authHeader.replace("Bearer ", "");
         const { data: { user: caller }, error: callerError } = await supabaseAdmin.auth.getUser(callerToken);
         if (callerError || !caller) {
@@ -37,31 +33,49 @@ serve(async (req) => {
             });
         }
 
-        // Check super_admin role
         const { data: roles } = await supabaseAdmin
             .from("user_roles")
             .select("role")
             .eq("user_id", caller.id);
         const isSuperAdmin = roles?.some((r) => r.role === "super_admin");
         if (!isSuperAdmin) {
-            return new Response(JSON.stringify({ error: "Apenas super admins podem criar usuários" }), {
+            return new Response(JSON.stringify({ error: "Apenas super admins podem gerenciar usuários" }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        // Parse body
-        const { email, password } = await req.json();
+        const { email, password, action } = await req.json();
         if (!email || !password) {
             return new Response(JSON.stringify({ error: "Email e senha são obrigatórios" }), {
                 status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        // Create user via Admin API — no email confirmation needed
+        // Update password for existing user
+        if (action === "update_password") {
+            const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const existingUser = existingUsers?.users?.find((u) => u.email === email);
+            if (!existingUser) {
+                return new Response(JSON.stringify({ error: "Usuário não encontrado" }), {
+                    status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password });
+            if (updateError) {
+                return new Response(JSON.stringify({ error: updateError.message }), {
+                    status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+            return new Response(JSON.stringify({ success: true }), {
+                status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // Create new user
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            email_confirm: true, // mark email as already confirmed
+            email_confirm: true,
         });
 
         if (createError) {
