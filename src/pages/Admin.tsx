@@ -21,8 +21,8 @@ export default function Admin() {
   );
   if (!user || !isAdmin) return <Navigate to="/login" replace />;
 
-  // Admin users always start on "services" tab
-  const defaultTab = "services";
+  // Regular admins start on "schedule", super admins on "services"
+  const defaultTab = isSuperAdmin ? "services" : "schedule";
 
   return (
     <div className="min-h-screen relative">

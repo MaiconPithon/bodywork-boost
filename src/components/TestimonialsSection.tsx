@@ -83,10 +83,10 @@ export default function TestimonialsSection() {
                     className="text-center mb-12"
                 >
                     <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground mb-3">
-                        Depoimentos
+                        Experiência dos Clientes
                     </h2>
                     <p className="text-muted-foreground font-body max-w-md mx-auto">
-                        O que nossos clientes dizem sobre os atendimentos
+                        Veja o que dizem sobre nossos atendimentos
                     </p>
                 </motion.div>
 
