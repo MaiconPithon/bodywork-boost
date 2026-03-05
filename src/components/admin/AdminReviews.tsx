@@ -3,9 +3,14 @@ import { motion } from "framer-motion";
 import { Star, Check, EyeOff, RefreshCw, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import type { Tables } from "@/integrations/supabase/types";
-
-type Review = Tables<"reviews">;
+interface Review {
+    id: string;
+    nome_cliente: string;
+    estrelas: number;
+    comentario: string | null;
+    is_approved: boolean;
+    created_at: string;
+}
 
 function StarDisplay({ count }: { count: number }) {
     return (
