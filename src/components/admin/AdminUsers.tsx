@@ -60,17 +60,10 @@ export default function AdminUsers() {
     }
 
     if (data?.user_id) {
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: data.user_id, role: "admin" as const });
-      if (roleError) {
-        setMessage("Usuário criado mas erro ao atribuir role: " + roleError.message);
-      } else {
-        setMessage(`✓ Admin ${email} criado com sucesso!`);
-        setEmail("");
-        setPassword("");
-        await loadAdmins();
-      }
+      setMessage(`✓ Admin ${email} criado com sucesso!`);
+      setEmail("");
+      setPassword("");
+      await loadAdmins();
     }
     setLoading(false);
   };

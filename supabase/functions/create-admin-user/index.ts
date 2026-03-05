@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -84,7 +84,13 @@ serve(async (req) => {
             });
         }
 
-        return new Response(JSON.stringify({ user_id: newUser.user.id, email: newUser.user.email }), {
+        // Auto-assign admin role
+        const userId = newUser.user.id;
+        const { error: roleError } = await supabaseAdmin
+            .from("user_roles")
+            .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
+
+        return new Response(JSON.stringify({ user_id: userId, email: newUser.user.email, role_assigned: !roleError }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     } catch (err) {
