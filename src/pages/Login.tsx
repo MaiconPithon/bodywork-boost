@@ -18,16 +18,23 @@ export default function Login() {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotMessage, setForgotMessage] = useState("");
 
+  const [redirectError, setRedirectError] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setRedirectError(false);
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
     if (error) {
       setError("Email ou senha incorretos.");
     } else {
-      navigate("/admin");
+      try {
+        navigate("/admin");
+      } catch {
+        setRedirectError(true);
+      }
     }
   };
 
@@ -128,6 +135,12 @@ export default function Login() {
               </div>
             </div>
             {error && <p className="text-destructive text-sm font-body">{error}</p>}
+            {redirectError && (
+              <div className="bg-accent/50 border border-border rounded-lg p-3 text-sm font-body text-foreground">
+                Acesso autorizado, mas falha no redirecionamento.{" "}
+                <a href="/admin" className="text-primary underline font-semibold">Clique aqui para entrar.</a>
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
             </Button>

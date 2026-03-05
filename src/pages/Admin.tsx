@@ -21,6 +21,9 @@ export default function Admin() {
   );
   if (!user || !isAdmin) return <Navigate to="/login" replace />;
 
+  // Admin users always start on "services" tab
+  const defaultTab = "services";
+
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${loginBg})` }} />
@@ -42,7 +45,7 @@ export default function Admin() {
       </header>
 
       <main className="container px-4 py-8 relative z-10">
-        <Tabs defaultValue="services">
+        <Tabs defaultValue={defaultTab}>
           <TabsList className="mb-6 flex-wrap h-auto gap-1">
             <TabsTrigger value="services" className="gap-1"><LayoutGrid size={16} /> Serviços</TabsTrigger>
             <TabsTrigger value="gallery" className="gap-1"><Image size={16} /> Galeria</TabsTrigger>

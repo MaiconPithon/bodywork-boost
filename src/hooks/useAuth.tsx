@@ -23,16 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Flag to avoid redundant role fetches when both getSession and onAuthStateChange fire for same user
   const rolesFetchedFor = useRef<string | null>(null);
 
-  const checkRole = async (userId: string) => {
-    if (rolesFetchedFor.current === userId) return;
+  const checkRole = async (userId: string, force = false) => {
+    if (!force && rolesFetchedFor.current === userId) return;
     rolesFetchedFor.current = userId;
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    if (data) {
-      setIsAdmin(data.some((r) => r.role === "admin" || r.role === "super_admin"));
-      setIsSuperAdmin(data.some((r) => r.role === "super_admin"));
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (data) {
+        setIsAdmin(data.some((r) => r.role === "admin" || r.role === "super_admin"));
+        setIsSuperAdmin(data.some((r) => r.role === "super_admin"));
+      }
+    } catch {
+      // Network error – keep previous state
     }
   };
 
@@ -53,7 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await checkRole(session.user.id);
+          // Force re-fetch on SIGNED_IN to ensure roles are loaded after login
+          await checkRole(session.user.id, _event === "SIGNED_IN");
         } else {
           rolesFetchedFor.current = null;
           setIsAdmin(false);
