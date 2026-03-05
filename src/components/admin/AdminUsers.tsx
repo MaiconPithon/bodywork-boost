@@ -48,22 +48,46 @@ export default function AdminUsers() {
     setLoading(true);
     setMessage("");
 
-    const { data, error } = await supabase.functions.invoke("create-admin-user", {
-      body: { email, password },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("create-admin-user", {
+        body: { email, password },
+      });
 
-    if (error || data?.error) {
-      const msg = data?.error || error?.message || "Erro desconhecido";
-      setMessage("Erro: " + msg);
-      setLoading(false);
-      return;
-    }
+      if (error) {
+        if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+          setMessage("Erro: Falha de conexão. Verifique sua internet e tente novamente.");
+        } else {
+          setMessage("Erro: " + (error.message || "Falha ao conectar com o servidor."));
+        }
+        setLoading(false);
+        return;
+      }
 
-    if (data?.user_id) {
-      setMessage(`✓ Admin ${email} criado com sucesso!`);
-      setEmail("");
-      setPassword("");
-      await loadAdmins();
+      if (data?.error) {
+        const errMsg = data.error.toLowerCase();
+        if (errMsg.includes("already") || errMsg.includes("already been registered") || errMsg.includes("duplicate") || errMsg.includes("já existe") || errMsg.includes("already registered")) {
+          setMessage("Erro: Este email já está cadastrado no sistema.");
+        } else if (errMsg.includes("não autorizado") || errMsg.includes("token inválido")) {
+          setMessage("Erro: Sessão expirada. Faça logout e login novamente.");
+        } else if (errMsg.includes("apenas super admins")) {
+          setMessage("Erro: Apenas Super Admins podem criar usuários.");
+        } else if (errMsg.includes("invalid email") || errMsg.includes("email inválido")) {
+          setMessage("Erro: Email inválido. Verifique o formato.");
+        } else {
+          setMessage("Erro: " + data.error);
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user_id) {
+        setMessage(`✓ Admin ${email} criado com sucesso!`);
+        setEmail("");
+        setPassword("");
+        await loadAdmins();
+      }
+    } catch (err) {
+      setMessage("Erro: Falha de conexão com o servidor. Tente novamente.");
     }
     setLoading(false);
   };
@@ -80,16 +104,27 @@ export default function AdminUsers() {
     setChangingPw(true);
     setChangeMsg("");
 
-    const { data, error } = await supabase.functions.invoke("create-admin-user", {
-      body: { email: changeEmail, password: newPassword, action: "update_password" },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("create-admin-user", {
+        body: { email: changeEmail, password: newPassword, action: "update_password" },
+      });
 
-    if (error || data?.error) {
-      setChangeMsg("Erro: " + (data?.error || error?.message || "Erro desconhecido"));
-    } else {
-      setChangeMsg("✓ Senha alterada com sucesso!");
-      setChangeEmail("");
-      setNewPassword("");
+      if (error) {
+        setChangeMsg("Erro: " + (error.message?.includes("Failed to fetch") ? "Falha de conexão." : error.message || "Erro desconhecido"));
+      } else if (data?.error) {
+        const errMsg = data.error.toLowerCase();
+        if (errMsg.includes("não encontrado") || errMsg.includes("not found")) {
+          setChangeMsg("Erro: Usuário não encontrado com este email.");
+        } else {
+          setChangeMsg("Erro: " + data.error);
+        }
+      } else {
+        setChangeMsg("✓ Senha alterada com sucesso!");
+        setChangeEmail("");
+        setNewPassword("");
+      }
+    } catch (err) {
+      setChangeMsg("Erro: Falha de conexão com o servidor.");
     }
     setChangingPw(false);
   };
